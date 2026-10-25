@@ -732,7 +732,7 @@
             toast.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-xs font-medium flex items-center space-x-2 transition transform translate-y-2 opacity-0 ${bgColors}`;
             
             let icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info');
-            toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"><span>${message}</span>`;
             
             container.appendChild(toast);
             
