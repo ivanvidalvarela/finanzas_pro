@@ -70,7 +70,7 @@
         <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
             
             <!-- Notificaciones / Alertas toast -->
-            <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+            <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
             <!-- Panel General (Dashboard KPIs) -->
             <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -380,7 +380,7 @@
             } catch (e) {
                 console.error("Error Firebase init:", e);
                 document.getElementById('syncStatus').innerText = "⚠️ Modo Local (Sin nube)";
-                showToast("Funcionado en modo local", "info");
+                showToast("Funcionando en modo local", "info");
             }
         });
 
@@ -729,7 +729,7 @@
             const toast = document.createElement('div');
             
             let bgColors = type === 'success' ? 'bg-emerald-600 text-white' : (type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-white');
-            toast.className = `px-4 py-3 rounded-xl shadow-lg text-xs font-medium flex items-center space-x-2 transition transform translate-y-2 opacity-0 ${bgColors}`;
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg text-xs font-medium flex items-center space-x-2 transition transform translate-y-2 opacity-0 ${bgColors}`;
             
             let icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info');
             toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
@@ -748,7 +748,7 @@
 
         function escapeHtml(str) {
             if (!str) return '';
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(>"/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
     </script>
 </body>
