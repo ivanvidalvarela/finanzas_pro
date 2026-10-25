@@ -1,1 +1,755 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanzasPro - Gestor Financiero Inteligente Cloud</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200">
 
+    <div id="app" class="min-h-full flex flex-col">
+        <!-- Navegación Superior -->
+        <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-brand-600 text-white p-2.5 rounded-xl shadow-md">
+                        <i class="fa-solid fa-wallet text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-tight">FinanzasPro Cloud</h1>
+                        <span id="syncStatus" class="text-[10px] text-amber-500 font-medium">Conectando a la nube...</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <button onclick="toggleDarkMode()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition" title="Cambiar Tema">
+                        <i id="themeIcon" class="fa-solid fa-moon text-slate-600 dark:text-slate-300"></i>
+                    </button>
+                    <button onclick="openModal('exportModal')" class="hidden sm:inline-flex items-center space-x-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-medium transition">
+                        <i class="fa-solid fa-cloud"></i>
+                        <span>Sincronización</span>
+                    </button>
+                    <button onclick="openModal('addTransactionModal')" class="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm shadow-lg shadow-brand-500/30 transition transform active:scale-95">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Nuevo Registro</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido Principal -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            
+            <!-- Notificaciones / Alertas toast -->
+            <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+            <!-- Panel General (Dashboard KPIs) -->
+            <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Saldo Total</p>
+                        <h3 id="kpiBalance" class="text-2xl font-bold mt-1">0.00 €</h3>
+                        <span id="kpiBalanceTrend" class="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1 inline-block">Sincronizado</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-piggy-bank"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Ingresos del Mes</p>
+                        <h3 id="kpiIncome" class="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">0.00 €</h3>
+                        <span class="text-xs text-slate-400 mt-1 inline-block">Mes en curso</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Gastos del Mes</p>
+                        <h3 id="kpiExpense" class="text-2xl font-bold mt-1 text-rose-600 dark:text-rose-400">0.00 €</h3>
+                        <span class="text-xs text-slate-400 mt-1 inline-block">Mes en curso</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-arrow-trend-down"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">Tasa de Ahorro</p>
+                        <h3 id="kpiSavingsRate" class="text-2xl font-bold mt-1">0%</h3>
+                        <span class="text-xs text-slate-400 mt-1 inline-block">Ingresos vs Gastos</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección de Métodos Inteligentes de Entrada (IA) -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Tarjeta: Subir Factura / Ticket -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="p-2.5 rounded-lg bg-brand-50 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400">
+                                <i class="fa-solid fa-file-invoice text-lg"></i>
+                            </div>
+                            <h2 class="text-base font-semibold">Escanear Factura o Ticket con IA</h2>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                            Sube una foto de tu ticket, factura o recibo. Gemini extraerá automáticamente el concepto, importe y fecha.
+                        </p>
+                        <div id="dropZone" class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-6 text-center hover:border-brand-500 transition cursor-pointer bg-slate-50 dark:bg-slate-900/50 relative">
+                            <input type="file" id="invoiceFile" accept="image/*,application/pdf" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleInvoiceUpload(event)">
+                            <div id="dropZoneContent" class="space-y-2">
+                                <i class="fa-solid fa-cloud-arrow-up text-3xl text-brand-500"></i>
+                                <p class="text-sm font-medium">Arrastra tu archivo aquí o <span class="text-brand-600 dark:text-brand-400 underline">explora</span></p>
+                                <p class="text-[11px] text-slate-400">Soporta imágenes (PNG, JPG) y PDF</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="invoiceLoading" class="hidden mt-4 text-center py-2 text-xs text-brand-600 dark:text-brand-400 font-medium">
+                        <i class="fa-solid fa-spinner fa-spin mr-2"></i> Analizando documento con Gemini IA...
+                    </div>
+                </div>
+
+                <!-- Tarjeta: Parseador de SMS y Tarjetas -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+                                <i class="fa-solid fa-credit-card text-lg"></i>
+                            </div>
+                            <h2 class="text-base font-semibold">Importar Notificación o SMS Bancario</h2>
+                        </div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                            Pega el texto de tu notificación bancaria o SMS de compra con tarjeta y la IA registrará el movimiento al instante.
+                        </p>
+                        <textarea id="smsInput" rows="3" placeholder="Ej: Compra realizada por 45.90 EUR en Mercadona el 24/10/2026..." class="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 mb-3 resize-none"></textarea>
+                    </div>
+                    <button onclick="parseSmsText()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Procesar y Guardar Gasto</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Sección Gráfica y Filtros de Movimientos -->
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Gráfica de Gastos -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+                    <h2 class="font-semibold text-sm mb-4">Gastos por Categoría</h2>
+                    <div class="relative flex-1 flex items-center justify-center min-h-[220px]">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Historial de Movimientos -->
+                <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <h2 class="font-semibold text-sm">Historial de Transacciones</h2>
+                        <!-- Filtros -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <input type="month" id="filterMonth" onchange="renderTransactions()" class="text-xs bg-slate-100 dark:bg-slate-700 border-0 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-brand-500" title="Filtrar por Mes">
+                            <select id="filterType" onchange="renderTransactions()" class="text-xs bg-slate-100 dark:bg-slate-700 border-0 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-brand-500">
+                                <option value="all">Todos los tipos</option>
+                                <option value="income">Ingresos</option>
+                                <option value="expense">Gastos</option>
+                            </select>
+                            <select id="filterCategory" onchange="renderTransactions()" class="text-xs bg-slate-100 dark:bg-slate-700 border-0 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-brand-500">
+                                <option value="all">Todas las categorías</option>
+                                <option value="Alimentación">Alimentación</option>
+                                <option value="Transporte">Transporte</option>
+                                <option value="Vivienda">Vivienda</option>
+                                <option value="Ocio">Ocio</option>
+                                <option value="Salud">Salud</option>
+                                <option value="Sueldo/Nómina">Sueldo/Nómina</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Listado de Movimientos -->
+                    <div class="overflow-x-auto flex-1 max-h-[320px] overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-700">
+                                    <th class="pb-2 font-medium">Concepto / Nota</th>
+                                    <th class="pb-2 font-medium">Categoría</th>
+                                    <th class="pb-2 font-medium">Fecha</th>
+                                    <th class="pb-2 font-medium text-right">Importe</th>
+                                    <th class="pb-2 font-medium text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody" class="text-xs divide-y divide-slate-100 dark:divide-slate-700">
+                                <!-- Filas dinámicas -->
+                            </tbody>
+                        </table>
+                        <div id="emptyTransactions" class="hidden text-center py-12 text-slate-400 text-xs">
+                            <i class="fa-solid fa-receipt text-3xl mb-2 opacity-40"></i>
+                            <p>No hay transacciones registradas para este periodo.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-4 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400">
+                FinanzasPro Cloud &copy; 2026 - Sincronizado en la nube para iPhone, Android, PC y Mac
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal: Nueva Transacción Manual -->
+    <div id="addTransactionModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-base">Nueva Transacción Manual</h3>
+                <button onclick="closeModal('addTransactionModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="transactionForm" onsubmit="handleManualSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Tipo de Movimiento</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="btnExpense" onclick="setTxType('expense')" class="py-2 text-xs font-semibold rounded-xl bg-rose-600 text-white shadow-sm transition">Gasto</button>
+                        <button type="button" id="btnIncome" onclick="setTxType('income')" class="py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition">Ingreso</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Concepto</label>
+                    <input type="text" id="txConcept" required placeholder="Ej: Compra supermercado" class="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Importe (€)</label>
+                        <input type="number" step="0.01" id="txAmount" required placeholder="0.00" class="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Fecha</label>
+                        <input type="date" id="txDate" required class="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Categoría</label>
+                    <select id="txCategory" class="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-brand-500">
+                        <option value="Alimentación">Alimentación</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Vivienda">Vivienda</option>
+                        <option value="Ocio">Ocio</option>
+                        <option value="Salud">Salud</option>
+                        <option value="Sueldo/Nómina">Sueldo/Nómina</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Notas / Observaciones (Opcional)</label>
+                    <input type="text" id="txNotes" placeholder="Ej: Pagado con tarjeta de débito..." class="w-full text-xs p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium text-xs shadow-lg shadow-brand-500/20 transition">Guardar Transacción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Configuración de Nube -->
+    <div id="exportModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-base">Sincronización en la Nube</h3>
+                <button onclick="closeModal('exportModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Tus datos están vinculados de forma segura a tu cuenta en la nube para que puedas acceder desde cualquier dispositivo.</p>
+            <div class="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700 mb-4">
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-1 font-medium">ID de Sesión Cloud actual:</p>
+                <p id="userIdDisplay" class="text-xs font-mono font-bold text-brand-600 dark:text-brand-400 break-all">Cargando...</p>
+            </div>
+            <div class="space-y-3">
+                <button onclick="exportData()" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium text-xs transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-file-arrow-down"></i>
+                    <span>Exportar Copia Local (JSON)</span>
+                </button>
+                <button onclick="closeModal('exportModal')" class="w-full py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl font-medium text-xs transition">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase y Lógica de la Aplicación -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuración Firebase global
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'finanzas-app-cloud';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "demo", projectId: "demo" };
+
+        let app, db, auth;
+        let transactions = [];
+        let currentTxType = 'expense';
+        let categoryChartInstance = null;
+        let userId = null;
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('txDate').valueAsDate = new Date();
+            
+            const currentMonthStr = new Date().toISOString().slice(0, 7);
+            const monthInput = document.getElementById('filterMonth');
+            if(monthInput) monthInput.value = currentMonthStr;
+
+            initChart();
+
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon();
+            }
+
+            // Inicializar Firebase
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : undefined;
+                if (token) {
+                    await signInWithCustomToken(auth, token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                userId = auth.currentUser?.uid || crypto.randomUUID();
+                document.getElementById('userIdDisplay').innerText = userId;
+                document.getElementById('syncStatus').innerText = "☁️ Sincronizado en la Nube";
+                document.getElementById('syncStatus').className = "text-[10px] text-emerald-500 font-medium";
+
+                // Escuchar datos en tiempo real (RULE 1 & RULE 2)
+                const colRef = collection(db, 'artifacts', appId, 'users', userId, 'transactions');
+                onSnapshot(query(colRef), (snapshot) => {
+                    transactions = [];
+                    snapshot.forEach(docSnap => {
+                        transactions.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+                    // Ordenar por fecha descendente en memoria
+                    transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    updateDashboard();
+                    renderTransactions();
+                    updateChart();
+                }, (error) => {
+                    console.error("Error sincronizando:", error);
+                    showToast("Error de sincronización con la nube", "error");
+                });
+
+            } catch (e) {
+                console.error("Error Firebase init:", e);
+                document.getElementById('syncStatus').innerText = "⚠️ Modo Local (Sin nube)";
+                showToast("Funcionado en modo local", "info");
+            }
+        });
+
+        // Modales globales
+        window.openModal = function(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+        window.closeModal = function(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        window.setTxType = function(type) {
+            currentTxType = type;
+            const btnExpense = document.getElementById('btnExpense');
+            const btnIncome = document.getElementById('btnIncome');
+            if (type === 'expense') {
+                btnExpense.className = "py-2 text-xs font-semibold rounded-xl bg-rose-600 text-white shadow-sm transition";
+                btnIncome.className = "py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition";
+            } else {
+                btnIncome.className = "py-2 text-xs font-semibold rounded-xl bg-emerald-600 text-white shadow-sm transition";
+                btnExpense.className = "py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition";
+            }
+        }
+
+        // Guardar Transacción en Firestore
+        window.handleManualSubmit = async function(e) {
+            e.preventDefault();
+            if (!userId || !db) {
+                showToast('Esperando conexión con la nube...', 'error');
+                return;
+            }
+
+            const concept = document.getElementById('txConcept').value;
+            const amount = parseFloat(document.getElementById('txAmount').value);
+            const date = document.getElementById('txDate').value;
+            const category = document.getElementById('txCategory').value;
+            const notes = document.getElementById('txNotes').value;
+
+            const newTx = {
+                concept,
+                amount,
+                type: currentTxType,
+                category,
+                date,
+                notes,
+                createdAt: Date.now()
+            };
+
+            try {
+                const colRef = collection(db, 'artifacts', appId, 'users', userId, 'transactions');
+                await addDoc(colRef, newTx);
+                closeModal('addTransactionModal');
+                document.getElementById('transactionForm').reset();
+                document.getElementById('txDate').valueAsDate = new Date();
+                setTxType('expense');
+                showToast('Transacción guardada en la nube', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al guardar el registro', 'error');
+            }
+        }
+
+        // Eliminar Transacción de Firestore
+        window.deleteTransaction = async function(id) {
+            if (!userId || !db) return;
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', userId, 'transactions', id);
+                await deleteDoc(docRef);
+                showToast('Transacción eliminada', 'info');
+            } catch (err) {
+                console.error(err);
+                showToast('Error al eliminar', 'error');
+            }
+        }
+
+        function updateDashboard() {
+            const totalBalance = transactions.reduce((acc, t) => t.type === 'income' ? acc + t.amount : acc - t.amount, 0);
+            
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            const monthTransactions = transactions.filter(t => t.date && t.date.startsWith(currentMonth));
+            
+            const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+            const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+            
+            const savingsRate = monthIncome > 0 ? Math.max(0, Math.round(((monthIncome - monthExpense) / monthIncome) * 100)) : 0;
+
+            document.getElementById('kpiBalance').innerText = totalBalance.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+            document.getElementById('kpiIncome').innerText = monthIncome.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+            document.getElementById('kpiExpense').innerText = monthExpense.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+            document.getElementById('kpiSavingsRate').innerText = savingsRate + '%';
+        }
+
+        window.renderTransactions = function() {
+            const filterMonth = document.getElementById('filterMonth').value;
+            const filterType = document.getElementById('filterType').value;
+            const filterCategory = document.getElementById('filterCategory').value;
+            const tbody = document.getElementById('transactionsTableBody');
+            const emptyEl = document.getElementById('emptyTransactions');
+
+            let filtered = transactions.filter(t => {
+                let matchMonth = !filterMonth || (t.date && t.date.startsWith(filterMonth));
+                let matchType = filterType === 'all' || t.type === filterType;
+                let matchCat = filterCategory === 'all' || t.category === filterCategory;
+                return matchMonth && matchType && matchCat;
+            });
+
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                emptyEl.classList.remove('hidden');
+                return;
+            } else {
+                emptyEl.classList.add('hidden');
+            }
+
+            filtered.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 dark:hover:bg-slate-700/50 transition";
+                
+                const isIncome = t.type === 'income';
+                const amountSign = isIncome ? '+' : '-';
+                const amountColor = isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+
+                tr.innerHTML = `
+                    <td class="py-3 font-medium">
+                        <div>${escapeHtml(t.concept)}</div>
+                        ${t.notes ? `<div class="text-[10px] text-slate-400 mt-0.5"><i class="fa-regular fa-note-sticky mr-1"></i>${escapeHtml(t.notes)}</div>` : ''}
+                    </td>
+                    <td class="py-3">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                            ${escapeHtml(t.category)}
+                        </span>
+                    </td>
+                    <td class="py-3 text-slate-500 dark:text-slate-400">${t.date}</td>
+                    <td class="py-3 text-right font-semibold ${amountColor}">${amountSign}${t.amount.toFixed(2)} €</td>
+                    <td class="py-3 text-center">
+                        <button onclick="deleteTransaction('${t.id}')" class="text-slate-400 hover:text-rose-600 transition" title="Eliminar">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            categoryChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#64748b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 11 }
+                            }
+                        }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!categoryChartInstance) return;
+            const expenses = transactions.filter(t => t.type === 'expense');
+            const catTotals = {};
+            expenses.forEach(t => {
+                catTotals[t.category] = (catTotals[t.category] || 0) + t.amount;
+            });
+
+            categoryChartInstance.data.labels = Object.keys(catTotals);
+            categoryChartInstance.data.datasets[0].data = Object.values(catTotals);
+            categoryChartInstance.update();
+        }
+
+        // Procesar Factura con Gemini IA
+        window.handleInvoiceUpload = async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const loadingEl = document.getElementById('invoiceLoading');
+            loadingEl.classList.remove('hidden');
+
+            try {
+                const base64Data = await fileToBase64(file);
+                const mimeType = file.type || 'image/jpeg';
+
+                const prompt = "Analiza este documento financiero (factura, ticket o recibo). Extrae la información y responde estrictamente en formato JSON válido con las siguientes claves: concept (string), amount (número decimal), category (una de estas: Alimentación, Transporte, Vivienda, Ocio, Salud, Otros), date (formato YYYY-MM-DD), notes (string opcional con detalles relevantes). Si no encuentras fecha pon la de hoy.";
+
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: prompt },
+                            { inlineData: { mimeType, data: base64Data } }
+                        ]
+                    }],
+                    generationConfig: {
+                        responseMimeType: "application/json"
+                    }
+                };
+
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const textResponse = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (textResponse) {
+                    const parsed = JSON.parse(textResponse);
+                    const newTx = {
+                        concept: parsed.concept || 'Gasto escaneado',
+                        amount: parseFloat(parsed.amount) || 0.0,
+                        type: 'expense',
+                        category: parsed.category || 'Otros',
+                        date: parsed.date || new Date().toISOString().slice(0, 10),
+                        notes: parsed.notes || 'Escaneado con IA',
+                        createdAt: Date.now()
+                    };
+
+                    const colRef = collection(db, 'artifacts', appId, 'users', userId, 'transactions');
+                    await addDoc(colRef, newTx);
+                    showToast(`Factura procesada: ${newTx.concept} (-${newTx.amount}€)`, 'success');
+                } else {
+                    throw new Error("No se pudo interpretar el archivo");
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Error al procesar la factura con IA', 'error');
+            } finally {
+                loadingEl.classList.add('hidden');
+                event.target.value = '';
+            }
+        }
+
+        // Parsear Texto SMS o Notificación Bancaria con Gemini IA
+        window.parseSmsText = async function() {
+            const smsText = document.getElementById('smsInput').value.trim();
+            if (!smsText) {
+                showToast('Por favor, escribe o pega el texto del extracto o notificación.', 'error');
+                return;
+            }
+
+            showToast('Analizando extracto con IA...', 'info');
+
+            try {
+                const prompt = `Analiza este mensaje o notificación bancaria: "${smsText}". Extrae la transacción y responde estrictamente en formato JSON con claves: concept (string), amount (número decimal), type ('expense' o 'income'), category (Alimentación, Transporte, Vivienda, Ocio, Salud, Sueldo/Nómina, Otros), date (formato YYYY-MM-DD o la de hoy si no se especifica), notes (string con detalles adicionales si procede).`;
+
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [{ text: prompt }]
+                    }],
+                    generationConfig: {
+                        responseMimeType: "application/json"
+                    }
+                };
+
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const textResponse = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (textResponse) {
+                    const parsed = JSON.parse(textResponse);
+                    const newTx = {
+                        concept: parsed.concept || 'Movimiento bancario',
+                        amount: parseFloat(parsed.amount) || 0.0,
+                        type: parsed.type || 'expense',
+                        category: parsed.category || 'Otros',
+                        date: parsed.date || new Date().toISOString().slice(0, 10),
+                        notes: parsed.notes || 'Importado vía SMS/Notificación',
+                        createdAt: Date.now()
+                    };
+
+                    const colRef = collection(db, 'artifacts', appId, 'users', userId, 'transactions');
+                    await addDoc(colRef, newTx);
+                    document.getElementById('smsInput').value = '';
+                    showToast(`Movimiento registrado en la nube`, 'success');
+                } else {
+                    throw new Error("Error en la respuesta");
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Error al parsear el texto', 'error');
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        window.exportData = function() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `finanzas_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('Copia exportada con éxito', 'success');
+        }
+
+        window.toggleDarkMode = function() {
+            document.documentElement.classList.toggle('dark');
+            updateThemeIcon();
+        }
+
+        function updateThemeIcon() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const icon = document.getElementById('themeIcon');
+            icon.className = isDark ? "fa-solid fa-sun text-yellow-400" : "fa-solid fa-moon text-slate-600";
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgColors = type === 'success' ? 'bg-emerald-600 text-white' : (type === 'error' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-white');
+            toast.className = `px-4 py-3 rounded-xl shadow-lg text-xs font-medium flex items-center space-x-2 transition transform translate-y-2 opacity-0 ${bgColors}`;
+            
+            let icon = type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info');
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(>"/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
